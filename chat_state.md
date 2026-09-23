@@ -1,6 +1,6 @@
 # Chat State — resume point
 
-Last updated: Step 2 (ML microservice).
+Last updated: Step 3 (frontend).
 
 ## Done
 - [x] Repo scaffolded: `shared/`, `backend/`, `.gitignore`, `README.md`,
@@ -27,23 +27,40 @@ Last updated: Step 2 (ML microservice).
     ML service on :5001 → real prediction returned through the backend,
     unchanged contract shape.
 
+## Done (step 3, continued)
+- [x] **`frontend/` — React + Vite app, written, not yet run:**
+  - `TaskDashboard.jsx` + `StartTaskModal.jsx` — task list with status
+    badges, seatbelt/position form hitting `POST /tasks/:id/start`.
+  - `SafetyBanner.jsx` — polls `/safety/status` every 3s, turns red on a
+    seatbelt or proximity hazard.
+  - `TelemetrySimulator.jsx` — stands in for absent in-cab hardware; posts
+    ticks to `/events/telemetry` to actually drive idle detection and the
+    dashboard checkoff (idling/working presets included).
+  - `IdleEventLog.jsx` — polls `/events/idle`.
+  - `TrainingHub.jsx` — the 5-module skill tree (main chain
+    basic-safety → trench-fundamentals → advanced-grading →
+    zone-c-certification, plus the parallel heavy-load-handling branch),
+    with the progress strip from `/training/progress`.
+  - `PredictionCard.jsx` — `POST /predict`, predicted duration + confidence
+    interval + feature-attribution bars (real coefficients, not hand-set).
+  - No UI kit, no chart library — bars and the skill tree are plain CSS,
+    matching the project's minimal-dependency spirit. Two deps only:
+    `react` + `react-dom`, `vite` + `@vitejs/plugin-react` as dev deps.
+  - Dark, high-contrast industrial theme (CAT-yellow accent, Barlow
+    Condensed headings) — legible-at-a-glance is the design brief for an
+    in-cab or companion display, not a marketing look.
+  - JSX syntax-checked with `tsc --noEmit` (module resolution errors
+    ignored, since deps aren't installed) — no syntax errors. **Not run**:
+    same no-network sandbox constraint as before, `npm install` couldn't
+    happen here. See `frontend/README.md` for how to run it locally.
+
 ## Not started yet
-- [ ] **`frontend/`** — React app. Needs:
-  - Task dashboard (list, status badges, seatbelt/position inputs to hit
-    `/tasks/:id/start`)
-  - Safety status banner (polls `/safety/status`)
-  - Idle-event log view
-  - Training hub UI showing the 5-module skill tree, locked/unlocked with
-    requirement text
-  - Prediction card with feature-attribution bar chart (this now has real
-    data behind it — `featureAttribution` from `ml-service/app.py` is
-    genuine, not hand-set)
-  - Needs `npm install` for React/Vite tooling — **the build sandbox has no
-    network access, so this can't be `npm install`ed or run here.** Write
-    the code and `package.json` correctly; `npm install` and run it locally.
-- [ ] End-to-end integration test once all three tiers exist together
-  (backend + ml-service are confirmed working together now — frontend is
-  the remaining piece)
+- [ ] `npm install` + `npm run dev` locally, then a real click-through —
+  nothing in `frontend/` has touched a live backend yet.
+- [ ] End-to-end integration test once all three tiers run together and
+  have actually been exercised against each other with the frontend in the
+  loop (backend + ml-service were confirmed working together via curl in
+  step 2; the frontend is untested).
 - [ ] Demo rehearsal
 
 ## How to run what exists so far
@@ -54,14 +71,17 @@ cd backend && npm run generate-data
 # 2. Train the model
 cd ../ml-service && pip install -r requirements.txt && python train.py
 
-# 3. Run both services (separate terminals)
+# 3. Run all three tiers (separate terminals)
 cd ml-service && python app.py     # :5001
 cd backend && npm start            # :4000, proxies /predict to :5001
+cd frontend && npm install && npm run dev   # :5173, proxies API calls to :4000
 ```
 
 ## Open questions (from the original plan, still unresolved)
 - Real-time in-cab vs. pre/post-shift companion app — current build assumes
-  real-time in-cab, not confirmed with mentors.
+  real-time in-cab, not confirmed with mentors. The frontend's telemetry
+  simulator panel works either way (it's a manual stand-in regardless), but
+  which framing to pitch is still open.
 - Whether to match the organizer's example dataset image stylistically, or
   the schema in `shared/schema.md` is sufficient as-is.
 

@@ -69,9 +69,12 @@ Bucket → mechanism (all rule-based except the last):
   fake-number fallback. Current trained model: R²≈0.92, MAE≈2.2 min on a
   held-out 20% split (exact numbers vary run to run since the synthetic
   dataset is randomly generated).
-- **Frontend** (`frontend/`, not yet built): React app consuming all backend
+- **Frontend** (`frontend/`): React + Vite app consuming all backend
   endpoints — task dashboard, safety banner, training hub UI, prediction card
-  with explanation, idle-event log.
+  with explanation, idle-event log, and a telemetry-simulator panel standing
+  in for real in-cab hardware. Two runtime deps only (`react`, `react-dom`);
+  no UI kit or chart library. Written but not yet `npm install`ed or run —
+  see `chat_state.md`.
 
 ## 4. Shared schema & API contract
 
@@ -159,5 +162,8 @@ codes against. Highlights:
 /ml-service/train.py        — offline training (scikit-learn), writes model.json
 /ml-service/app.py          — Flask server, POST /predict, GET /health
 /ml-service/model.json      — trained artifact (gitignored, regenerate with train.py)
-/frontend/                  — not yet built
+/frontend/src/api.js        — fetch wrapper for every backend endpoint
+/frontend/src/App.jsx       — layout: safety banner, dashboard, prediction,
+                               telemetry sim, idle log, training hub
+/frontend/src/components/   — one component per bucket (see frontend/README.md)
 ```

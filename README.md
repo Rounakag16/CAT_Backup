@@ -11,7 +11,10 @@ Start here:
 
 ## Run what exists so far
 ```
-cd backend
-npm start        # backend on :4000, zero dependencies
+cd backend && npm start                     # :4000, zero dependencies
+cd ml-service && python app.py              # :5001
+cd frontend && npm install && npm run dev   # :5173
 ```
-`ml-service/` and `frontend/` don't exist yet — see `chat_state.md` for the plan.
+All three tiers are written. `frontend/` hasn't been `npm install`ed or run
+yet (no network access in the build sandbox) — see `chat_state.md` and
+`frontend/README.md`.
