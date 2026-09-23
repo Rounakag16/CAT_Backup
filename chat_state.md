@@ -1,39 +1,33 @@
 # Chat State — resume point
 
-Last updated: Step 1 (initial backend scaffold).
+Last updated: Step 2 (ML microservice).
 
 ## Done
 - [x] Repo scaffolded: `shared/`, `backend/`, `.gitignore`, `README.md`,
   `project_context.md`, `chat_state.md`.
 - [x] `shared/schema.md` and `shared/api-contract.md` written — full scope,
   no cuts (all 5 buckets, static geofenced zones, full training skill tree).
-- [x] Backend fully implemented (`backend/src/`), zero npm dependencies
-  (Node built-ins only — no network access in the build sandbox, see
-  `project_context.md` §5 for why):
-  - `store.js` — in-memory event log, tasks, zones, hazard points
-  - `rules/dashboard.js` — telemetry-verified checkoff
-  - `rules/safety.js` — seatbelt + geofenced proximity gating
-  - `rules/idleDetection.js` — rolling-window idle detector
-  - `rules/trainingHub.js` — full 5-module milestone skill tree
-  - `mlClient.js` — proxy to ML microservice, returns 503 if it's down (no
-    silent fallback)
-  - `server.js` — wires all of the above into the full API contract
-- [x] `backend/data/generateData.js` — synthetic dataset generator, produces
-  CSV + JSON (gitignored — regenerate with `npm run generate-data`)
-- [x] Smoke-tested the full flow: task blocking on seatbelt, proximity-hazard
-  blocking, telemetry ingestion → idle detection + dashboard checkoff →
-  training competency updating. All confirmed working.
+- [x] Backend fully implemented (`backend/src/`), zero npm dependencies:
+  dashboard checkoff, safety gating, idle detection, full 5-module training
+  skill tree, ML-proxy client. Smoke-tested and working.
+- [x] `backend/data/generateData.js` — synthetic dataset generator.
+- [x] **`ml-service/` — genuinely separate Flask microservice, done:**
+  - `train.py` — trains a real scikit-learn `LinearRegression` on the
+    synthetic dataset (one-hot task_type/condition/location + a
+    non-leaky per-operator `operator_history` feature computed only from
+    the training split), writes `model.json` (plain JSON, not a pickle —
+    no sklearn-version coupling at serve time).
+  - `app.py` — Flask server, `POST /predict` matching the contract exactly,
+    `GET /health`. Fails loudly at boot if `model.json` is missing rather
+    than serving fake numbers.
+  - **Trained and tested end-to-end**: R²≈0.92, MAE≈2.2 min on held-out
+    data. Confirmed the demo narrative works — same operator/task, wet vs.
+    dry condition, predicted duration moved 36 min → 27 min.
+  - **Confirmed the full three-tier flow**: backend `/predict` → proxies to
+    ML service on :5001 → real prediction returned through the backend,
+    unchanged contract shape.
 
 ## Not started yet
-- [ ] **`ml-service/`** — Flask + scikit-learn microservice. Needs:
-  - Offline training script using `backend/data/generateData.js`'s output
-    (the `durationMin` column is the label)
-  - Real feature attribution (coefficients from a linear model, or
-    permutation importance if a tree-based model is used instead)
-  - `POST /predict` route matching the contract in `shared/api-contract.md`
-  - Decide: linear regression (simplest, attribution is just coefficients)
-    vs. gradient boosting (better fit, attribution needs SHAP or permutation
-    importance — heavier but still doable with scikit-learn alone)
 - [ ] **`frontend/`** — React app. Needs:
   - Task dashboard (list, status badges, seatbelt/position inputs to hit
     `/tasks/:id/start`)
@@ -41,13 +35,29 @@ Last updated: Step 1 (initial backend scaffold).
   - Idle-event log view
   - Training hub UI showing the 5-module skill tree, locked/unlocked with
     requirement text
-  - Prediction card with feature-attribution bar chart
+  - Prediction card with feature-attribution bar chart (this now has real
+    data behind it — `featureAttribution` from `ml-service/app.py` is
+    genuine, not hand-set)
   - Needs `npm install` for React/Vite tooling — **the build sandbox has no
-    network access, so this can't be `npm install`ed or run here.** Write the
-    code and `package.json` correctly; you'll `npm install` and run it
-    locally where you do have network.
+    network access, so this can't be `npm install`ed or run here.** Write
+    the code and `package.json` correctly; `npm install` and run it locally.
 - [ ] End-to-end integration test once all three tiers exist together
+  (backend + ml-service are confirmed working together now — frontend is
+  the remaining piece)
 - [ ] Demo rehearsal
+
+## How to run what exists so far
+```
+# 1. Generate the dataset (once, or whenever you want fresh synthetic data)
+cd backend && npm run generate-data
+
+# 2. Train the model
+cd ../ml-service && pip install -r requirements.txt && python train.py
+
+# 3. Run both services (separate terminals)
+cd ml-service && python app.py     # :5001
+cd backend && npm start            # :4000, proxies /predict to :5001
+```
 
 ## Open questions (from the original plan, still unresolved)
 - Real-time in-cab vs. pre/post-shift companion app — current build assumes

@@ -61,11 +61,14 @@ Bucket → mechanism (all rule-based except the last):
   rule — dashboard checkoff, safety gating, idle detection, training
   competency. Zero external npm dependencies (Node built-in `http` only) —
   this was a deliberate choice (see §5), not a scope cut.
-- **ML microservice** (`ml-service/`, not yet built — see `chat_state.md`):
-  genuinely separate process. Trains a real scikit-learn regression model
-  offline from the synthetic dataset, serves `/predict` with real feature
-  attribution. The backend proxies to it and returns a visible `503` if it's
-  down — no silent fake-number fallback.
+- **ML microservice** (`ml-service/`): genuinely separate process (Flask,
+  port 5001). Trains a real scikit-learn `LinearRegression` offline from the
+  synthetic dataset (`ml-service/train.py`), serves `/predict` with real
+  feature attribution derived from the fitted coefficients. The backend
+  proxies to it and returns a visible `503` if it's down — no silent
+  fake-number fallback. Current trained model: R²≈0.92, MAE≈2.2 min on a
+  held-out 20% split (exact numbers vary run to run since the synthetic
+  dataset is randomly generated).
 - **Frontend** (`frontend/`, not yet built): React app consuming all backend
   endpoints — task dashboard, safety banner, training hub UI, prediction card
   with explanation, idle-event log.
@@ -108,6 +111,19 @@ codes against. Highlights:
   flagging.** A single idling telemetry tick doesn't flag anything; the rule
   tracks how long a machine has been continuously idling and only flags past
   the duration threshold (5 min), matching "excessive idling," not "idling."
+- **Model artifact is a plain JSON file (`model.json`), not a pickle.** Saving
+  raw coefficients + a feature list + the operator-history lookup as JSON
+  means the Flask app has zero scikit-learn-version coupling at serve time,
+  and the weights are human-readable/debuggable directly. `train.py` is the
+  only place scikit-learn itself is imported.
+- **`operator_history` is each operator's mean historical duration, computed
+  only from the training split.** This keeps it a real, non-leaky feature
+  (not the label in disguise) and gives a principled fallback (global mean)
+  for operators the model has never seen.
+- **`model.json` is gitignored, like the synthetic datasets.** It's fully
+  reproducible via `python train.py` (after `npm run generate-data` in
+  `backend/`) — regenerate it rather than expecting it to already exist
+  after a fresh clone.
 - **Training competency has no separate database.** All five milestone rules
   are pure functions over `completedTaskHistory` / `idleEvents` /
   `safetyAlerts` already in the store — this was true in the original plan
@@ -140,6 +156,8 @@ codes against. Highlights:
 /backend/src/rules/        — one file per bucket's rule logic
 /backend/src/mlClient.js   — proxy client to the ML microservice
 /backend/data/generateData.js — synthetic dataset generator (run standalone)
-/ml-service/                — not yet built
+/ml-service/train.py        — offline training (scikit-learn), writes model.json
+/ml-service/app.py          — Flask server, POST /predict, GET /health
+/ml-service/model.json      — trained artifact (gitignored, regenerate with train.py)
 /frontend/                  — not yet built
 ```
