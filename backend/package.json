@@ -1,0 +1,14 @@
+{
+  "name": "smart-operator-assistant-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Rules engine + task state machine for the Smart Operator Assistant. Zero external dependencies — Node built-ins only.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "generate-data": "node data/generateData.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
